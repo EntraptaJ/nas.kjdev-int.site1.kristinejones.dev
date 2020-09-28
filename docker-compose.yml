@@ -1,0 +1,126 @@
+version: '3.8'
+
+configs:
+  WebConfig:
+    name: WebConfig-1
+    file: ./Configs/Web/Caddyfile.json
+
+networks:
+  publicWeb:
+  
+  internalMinio:
+
+volumes:
+  minio1Data:
+    name: minio1Data
+    external: true
+
+  minio2Data:
+    name: minio2Data
+    external: true
+
+  minio3Data:
+    name: minio3Data
+    external: true
+
+  minio4Data:
+    name: minio4Data
+    external: true
+
+services:
+  Web:
+    image: kristianfoss/programs-caddy:caddy-main-scratch
+    command: ['run', '--config', '/etc/caddy/Caddyfile.json']
+    configs:
+      - source: WebConfig
+        target: /etc/caddy/Caddyfile.json
+        uid: '1000'
+        gid: '1000'
+        mode: 0440
+    deploy:
+      mode: replicated
+      replicas: 6
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+    networks:
+      - publicWeb
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: ingress
+
+  Minio1:
+    image: kristianfoss/programs-minio:minio-build-stable-scratch
+    command: ['server', 'http://Minio{1...4}/export']
+    deploy:
+      mode: replicated
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - "node.hostname==nas1"
+    environment:
+      MINIO_ACCESS_KEY: BLAH
+      MINIO_SECRET_KEY: BLAHBLAH
+    volumes:
+      - minio1Data:/export
+    networks:
+      - publicWeb
+      - internalMinio
+
+  Minio2:
+    image: kristianfoss/programs-minio:minio-build-stable-scratch
+    command: ['server', 'http://Minio{1...4}/export']
+    deploy:
+      mode: replicated
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - "node.hostname==nas2"
+    environment:
+      MINIO_ACCESS_KEY: BLAH
+      MINIO_SECRET_KEY: BLAHBLAH
+    volumes:
+      - minio2Data:/export
+    networks:
+      - publicWeb
+      - internalMinio
+
+  Minio3:
+    image: kristianfoss/programs-minio:minio-build-stable-scratch
+    command: ['server', 'http://Minio{1...4}/export']
+    deploy:
+      mode: replicated
+      replicas: 1
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - "node.hostname==nas3"
+    environment:
+      MINIO_ACCESS_KEY: BLAH
+      MINIO_SECRET_KEY: BLAHBLAH
+    volumes:
+      - minio3Data:/export
+    networks:
+      - publicWeb
+      - internalMinio
+
+  Minio4:
+    image: kristianfoss/programs-minio:minio-build-stable-scratch
+    command: ['server', 'http://Minio{1...4}/export']
+    deploy:
+      mode: replicated
+      replicas: 1
+      endpoint_mode: dnsrr
+    environment:
+      MINIO_ACCESS_KEY: BLAH
+      MINIO_SECRET_KEY: BLAHBLAH
+    volumes:
+      - minio4Data:/export
+    networks:
+      - publicWeb
+      - internalMinio
